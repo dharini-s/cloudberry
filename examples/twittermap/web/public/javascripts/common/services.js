@@ -1,4 +1,4 @@
-angular.module('cloudberry.common', [])
+angular.module('cloudberry.common', ['cloudberry.cache2'])
   .factory('cloudberryConfig', function(){
     return {
       ws: config.wsURL,
@@ -40,7 +40,7 @@ angular.module('cloudberry.common', [])
       }
     };
   })
-  .service('cloudberry', function($http, $timeout, $location, cloudberryConfig) {
+  .service('cloudberry', function($http, $timeout, $location, cloudberryConfig, CacheResults) {
     var startDate = config.startDate;
     var endDate = config.endDate;
     var defaultNonSamplingDayRange = 1500;
@@ -295,8 +295,26 @@ angular.module('cloudberry.common', [])
           }
         }));
 
-        ws.send(sampleJson);
-        ws.send(batchJson);
+        // If geoLevel is not county, query CB. If county and miss, query CB
+        if(cloudberryService.parameters.geoLevel !== 'county' ||
+            (cloudberryService.parameters.geoLevel === 'county' &&
+            CacheResults.cacheMiss(cloudberryService.parameters.keywords,
+            cloudberryService.parameters.timeInterval, cloudberryService.parameters.geoIds)))
+        {
+          console.log('Querying from middleware');
+          ws.send(sampleJson);
+          ws.send(batchJson);
+        }
+        else
+        {
+          CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds,
+              cloudberryService.mapResult);
+          for(var i = 0; i < cloudberryService.parameters.geoIds.length; ++i)
+          {
+            console.log('In common/services - fetching from cache2');
+            console.log(cloudberryService.mapResult[i]);
+          }
+        }
       }
     };
 
@@ -304,16 +322,23 @@ angular.module('cloudberry.common', [])
       $timeout(function() {
         var result = JSONbig.parse(event.data);
         switch (result.key) {
+
           case "sample":
             cloudberryService.tweetResult = result.value[0];
+            //CacheResults.updateStore(cloudberryService.tweetResult);
             break;
           case "batch":
             cloudberryService.timeResult = result.value[0];
             cloudberryService.mapResult = result.value[1];
+            console.log("Map result:");
+            console.log(cloudberryService.mapResult);
             cloudberryService.hashTagResult = result.value[2];
+            CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters.geoLevel,
+                cloudberryService.parameters.geoIds, cloudberryService.parameters.keywords);
             break;
           case "totalCount":
             cloudberryService.totalCount = result.value[0][0].count;
+            console.log("Reached totalcount common services.js");
             break;
           case "error":
             console.error(result);
@@ -328,6 +353,7 @@ angular.module('cloudberry.common', [])
         }
       });
     };
+
 
     return cloudberryService;
   });
