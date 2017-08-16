@@ -35,8 +35,8 @@ angular.module('cloudberry.cache2', ['cloudberry.common'])
       var j = 0;
 
       for (var i = 0; i < geoIds.length; ++i) {
-          if(store.get(geoIds[i] !== {})) {
-              angular.copy(store.get(geoIds[i]), mapResult[j]);
+          if(store.get(geoIds[i] !== '{}')) {
+              angular.copy(JSON.parse(store.get(geoIds[i])), mapResult[j]);
               // mapResult[j].count = store.get(geoIds[i]).count;
               // mapResult[j].county = store.get(geoIds[i]).county;
               // mapResult[j].population = store.get(geoIds[i]).population;
@@ -55,11 +55,11 @@ angular.module('cloudberry.cache2', ['cloudberry.common'])
           console.log('Local keyword in updateStore() is: ' + this.keyword);
 
           for (var i = 0; i < mapResult.length; ++i) {
-              store.set(mapResult[i].county, mapResult[i]);
+              store.set(mapResult[i].county, JSON.stringify(mapResult[i]));
           }
           for (var i = 0; i < geoIds.length; ++i) {
               if (store.get(geoIds[i]) === undefined)
-                  store.set(geoIds[i], {});
+                  store.set(geoIds[i], '{}');
           }
           // store.each(function(value, key) {
           //     console.log(key, '==', value)
