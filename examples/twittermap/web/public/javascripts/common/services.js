@@ -9,7 +9,6 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
       normalizationUpscaleFactor: 1000 * 1000,
       normalizationUpscaleText: "/M",
       sentimentUpperBound: 4,
-      cacheThreshold: config.cacheThreshold,
       getPopulationTarget: function(parameters){
         switch (parameters.geoLevel) {
           case "state":
@@ -91,8 +90,12 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
       queryStartDate.setDate(queryStartDate.getDate() - maxDay);
       queryStartDate = parameters.timeInterval.start > queryStartDate ? parameters.timeInterval.start : queryStartDate;
 
-      var filter = [
+      return [
         {
+          field: "geo_tag." + spatialField,
+          relation: "in",
+          values: parameters.geoIds
+        }, {
           field: "create_at",
           relation: "inRange",
           values: [queryStartDate.toISOString(), parameters.timeInterval.end.toISOString()]
@@ -102,16 +105,6 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
           values: keywords
         }
       ];
-      if (parameters.geoIds.length <= 2000){
-        filter.push(
-          {
-            field: "geo_tag." + spatialField,
-            relation: "in",
-            values: parameters.geoIds
-          }
-        );
-      }
-      return filter;
     }
 
     function byGeoRequest(parameters) {
@@ -295,24 +288,26 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
           }
         }));
 
-        // If geoLevel is not county, query CB. If county and miss, query CB
-        if(cloudberryService.parameters.geoLevel !== 'county' ||
-            (cloudberryService.parameters.geoLevel === 'county' &&
-            CacheResults.cacheMiss(cloudberryService.parameters.keywords,
-            cloudberryService.parameters.timeInterval, cloudberryService.parameters.geoIds)))
-        {
-          console.log('Querying from middleware');
+        if (cloudberryService.parameters.geoLevel === 'city') {
           ws.send(sampleJson);
           ws.send(batchJson);
-        }
-        else
-        {
-          CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds,
-              cloudberryService.mapResult);
-          for(var i = 0; i < cloudberryService.parameters.geoIds.length; ++i)
-          {
-            console.log('In common/services - fetching from cache2');
-            console.log(cloudberryService.mapResult[i]);
+        } else {
+          if (CacheResults.cacheMiss(cloudberryService.parameters.keywords,cloudberryService.parameters.timeInterval,
+            cloudberryService.parameters.geoIds)) {
+            //miss is true
+            console.log('Querying from middleware');
+            ws.send(sampleJson);
+            ws.send(batchJson);
+          } else {
+            var temp = CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds, cloudberryService.parameters.geoLevel);
+            var tempstr = JSON.stringify(temp);
+            console.log('Temp is: ');
+            console.log(tempstr);
+            console.log('Received mapresult');
+            cloudberryService.mapResult = temp;
+            var str = JSON.stringify(cloudberryService.mapResult);
+            console.log('CloudberryService.mapResult is: ');
+            console.log(str);
           }
         }
       }
@@ -325,7 +320,6 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
 
           case "sample":
             cloudberryService.tweetResult = result.value[0];
-            //CacheResults.updateStore(cloudberryService.tweetResult);
             break;
           case "batch":
             cloudberryService.timeResult = result.value[0];
@@ -333,8 +327,9 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
             console.log("Map result:");
             console.log(cloudberryService.mapResult);
             cloudberryService.hashTagResult = result.value[2];
-            CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters.geoLevel,
-                cloudberryService.parameters.geoIds, cloudberryService.parameters.keywords);
+            if (cloudberryService.parameters.geoLevel === 'county' ||
+              cloudberryService.parameters.geoLevel === 'state')
+              CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters);
             break;
           case "totalCount":
             cloudberryService.totalCount = result.value[0][0].count;
