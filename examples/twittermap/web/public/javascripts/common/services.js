@@ -288,28 +288,21 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
           }
         }));
 
-        if (cloudberryService.parameters.geoLevel === 'city') {
+        if (CacheResults.cacheMiss(cloudberryService.parameters.keywords,
+            cloudberryService.parameters.timeInterval,
+            cloudberryService.parameters.geoIds, cloudberryService.parameters.geoLevel)) {
+          // If miss is true
+          console.log('Querying from middleware');
           ws.send(sampleJson);
           ws.send(batchJson);
-        } else {
-          if (CacheResults.cacheMiss(cloudberryService.parameters.keywords,cloudberryService.parameters.timeInterval,
-            cloudberryService.parameters.geoIds)) {
-            //miss is true
-            console.log('Querying from middleware');
-            ws.send(sampleJson);
-            ws.send(batchJson);
-          } else {
-            var temp = CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds, cloudberryService.parameters.geoLevel);
-            var tempstr = JSON.stringify(temp);
-            console.log('Temp is: ');
-            console.log(tempstr);
-            console.log('Received mapresult');
-            cloudberryService.mapResult = temp;
-            var str = JSON.stringify(cloudberryService.mapResult);
-            console.log('CloudberryService.mapResult is: ');
-            console.log(str);
-          }
         }
+        else {
+          var temp = CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds,
+                                                      cloudberryService.parameters.geoLevel);
+          console.log('Received mapresult');
+          cloudberryService.mapResult = temp;
+        }
+
       }
     };
 
@@ -324,16 +317,11 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
           case "batch":
             cloudberryService.timeResult = result.value[0];
             cloudberryService.mapResult = result.value[1];
-            console.log("Map result:");
-            console.log(cloudberryService.mapResult);
             cloudberryService.hashTagResult = result.value[2];
-            if (cloudberryService.parameters.geoLevel === 'county' ||
-              cloudberryService.parameters.geoLevel === 'state')
-              CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters);
+            CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters);
             break;
           case "totalCount":
             cloudberryService.totalCount = result.value[0][0].count;
-            console.log("Reached totalcount common services.js");
             break;
           case "error":
             console.error(result);
