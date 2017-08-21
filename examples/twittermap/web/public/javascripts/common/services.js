@@ -311,7 +311,7 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
         else {
           var temp = CacheResults.getResultsFromCache(cloudberryService.parameters.geoIds,
                                                       cloudberryService.parameters.geoLevel);
-          console.log('Received mapresult');
+          console.log('Received map result from cache');
           cloudberryService.mapResult = temp;
 
           ws.send(sampleJson);
@@ -330,7 +330,6 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
             cloudberryService.tweetResult = result.value[0];
             break;
           case "batch":
-            console.log('Result length is ' + result.value.length);
             cloudberryService.timeResult = result.value[0];
             cloudberryService.mapResult = result.value[1];
             cloudberryService.hashTagResult = result.value[2];
