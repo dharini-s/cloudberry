@@ -218,7 +218,7 @@ angular.module('cloudberry.map', ['leaflet-directive', 'cloudberry.common','clou
         if ($scope.map) {
           $scope.status.zoomLevel = $scope.map.getZoom();
           $scope.bounds = $scope.map.getBounds();
-          if($scope.status.zoomLevel > 7) {
+          if($scope.status.zoomLevel > 9) {
             resetGeoInfo("city");
             if ($scope.polygons.statePolygons) {
               $scope.map.removeLayer($scope.polygons.statePolygons);

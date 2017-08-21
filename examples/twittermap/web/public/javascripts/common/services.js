@@ -288,6 +288,18 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
           }
         }));
 
+        var batchJsonWithoutMapRequest = (JSON.stringify({
+          batch: [byTimeRequest(parameters), byHashTagRequest(parameters)],
+          option: {
+            sliceMillis: 2000
+          },
+          transform: {
+            wrap: {
+              key: "batchJsonWithoutMapRequest"
+            }
+          }
+        }));
+
         if (CacheResults.cacheMiss(cloudberryService.parameters.keywords,
             cloudberryService.parameters.timeInterval,
             cloudberryService.parameters.geoIds, cloudberryService.parameters.geoLevel)) {
@@ -301,6 +313,9 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
                                                       cloudberryService.parameters.geoLevel);
           console.log('Received mapresult');
           cloudberryService.mapResult = temp;
+
+          ws.send(sampleJson);
+          ws.send(batchJsonWithoutMapRequest);
         }
 
       }
@@ -315,10 +330,15 @@ angular.module('cloudberry.common', ['cloudberry.cache2'])
             cloudberryService.tweetResult = result.value[0];
             break;
           case "batch":
+            console.log('Result length is ' + result.value.length);
             cloudberryService.timeResult = result.value[0];
             cloudberryService.mapResult = result.value[1];
             cloudberryService.hashTagResult = result.value[2];
             CacheResults.updateStore(cloudberryService.mapResult, cloudberryService.parameters);
+            break;
+          case "batchJsonWithoutMapRequest":
+            cloudberryService.timeResult = result.value[0];
+            cloudberryService.hashTagResult = result.value[1];
             break;
           case "totalCount":
             cloudberryService.totalCount = result.value[0][0].count;
